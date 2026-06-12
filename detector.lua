@@ -313,7 +313,13 @@ local function runInputListener()
                 local reqPath = string.format("%s/%dx/%s/%s.lua", DIRECTORY_BASE, payload.size, reqPlayer, payload.mode)
                 if fs.exists(reqPath) then
                     local chunk = loadfile(reqPath)
-                    if chunk then rednet.send(senderID, {success = true, matrix = chunk()}, "avatar_responses") end
+                    if chunk then 
+                        -- Correção: Executa e extrai os dados em uma variável estática segura
+                        local skinData = chunk() 
+                        if type(skinData) == "table" then
+                            rednet.send(senderID, {success = true, matrix = skinData}, "avatar_responses") 
+                        end
+                    end
                 end
             end
         end
