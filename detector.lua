@@ -72,15 +72,9 @@ local function drawMatrixFromFile(filePath, startX, startY)
     local chunk = loadfile(filePath)
     if not chunk then return false end
     local matrix = chunk()
-    
-    -- Proteção contra tabelas vazias ou corrompidas que causam index out of bounds
-    if not matrix or type(matrix) ~= "table" or #matrix == 0 then return false end
-    
     for i, colorLine in ipairs(matrix) do
-        if type(colorLine) == "string" and colorLine ~= "" then
-            monitor.setCursorPos(startX, startY + i - 1)
-            monitor.blit(string.rep(" ", #colorLine), colorLine, colorLine)
-        end
+        monitor.setCursorPos(startX, startY + i - 1)
+        monitor.blit(string.rep(" ", #colorLine), colorLine, colorLine)
     end
     return true
 end
@@ -313,7 +307,17 @@ local function runInputListener()
             end
 
         elseif event == "rednet_message" then
-            local senderID, payload, msgProtocol = eventData[2], eventData[3], eventData[4]
-            
+            local senderID, payload = eventData[2], eventData[3]
+            if type(payload) == "table" and payload.player and payload.mode and payload.size then
+                local reqPlayer = payload.player:sub(1,1):upper() .. payload.player:sub(2)
+                local reqPath = string.format("%s/%dx/%s/%s.lua", DIRECTORY_BASE, payload.size, reqPlayer, payload.mode)
+                if fs.exists(reqPath) then
+                    local chunk = loadfile(reqPath)
+                    if chunk then rednet.send(senderID, {success = true, matrix = chunk()}, "avatar_responses") end
+                end
+            end
+        end
+    end
+end
 
-
+parallel.waitForAny(runDownloadPipeline, runInputListener)
