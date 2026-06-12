@@ -71,15 +71,13 @@ local function drawMatrixFromFile(filePath, startX, startY)
     if not fs.exists(filePath) then return false end
     local chunk = loadfile(filePath)
     if not chunk then return false end
+    local matrix = chunk()
     
-    local success, matrix = pcall(chunk)
-    if not success or not matrix or type(matrix) ~= "table" or #matrix == 0 then 
-        return false 
-    end
+    -- Proteção contra tabelas vazias ou corrompidas que causam index out of bounds
+    if not matrix or type(matrix) ~= "table" or #matrix == 0 then return false end
     
     for i, colorLine in ipairs(matrix) do
-        -- Força a validação e garante que colorLine seja estritamente uma string válida
-        if type(colorLine) == "string" and #colorLine > 0 then
+        if type(colorLine) == "string" and colorLine ~= "" then
             monitor.setCursorPos(startX, startY + i - 1)
             monitor.blit(string.rep(" ", #colorLine), colorLine, colorLine)
         end
@@ -317,24 +315,6 @@ local function runInputListener()
         elseif event == "rednet_message" then
             local senderID, payload, msgProtocol = eventData[2], eventData[3], eventData[4]
             
-            -- PROTOCOLO CORRIGIDO: Aceita requisições diretas de tabelas contendo dados de skin
-            if type(payload) == "table" and payload.player and payload.mode and payload.size then
-                local reqPlayer = payload.player:sub(1,1):upper() .. payload.player:sub(2)
-                local reqPath = string.format("%s/%dx/%s/%s.lua", DIRECTORY_BASE, payload.size, reqPlayer, payload.mode)
-                
-                if fs.exists(reqPath) then
-                    local chunk = loadfile(reqPath)
-                    if chunk then 
-                        local mat = chunk()
-                        if mat and type(mat) == "table" and #mat > 0 then
-                            -- Responde de volta para o remetente usando o canal "avatar_responses"
-                            rednet.send(senderID, {success = true, matrix = mat}, "avatar_responses") 
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
+
 
 parallel.waitForAny(runDownloadPipeline, runInputListener)
