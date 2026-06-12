@@ -71,13 +71,15 @@ local function drawMatrixFromFile(filePath, startX, startY)
     if not fs.exists(filePath) then return false end
     local chunk = loadfile(filePath)
     if not chunk then return false end
-    local matrix = chunk()
     
-    -- Proteção contra tabelas vazias ou corrompidas que causam index out of bounds
-    if not matrix or type(matrix) ~= "table" or #matrix == 0 then return false end
+    local success, matrix = pcall(chunk)
+    if not success or not matrix or type(matrix) ~= "table" or #matrix == 0 then 
+        return false 
+    end
     
     for i, colorLine in ipairs(matrix) do
-        if type(colorLine) == "string" and colorLine ~= "" then
+        -- Força a validação e garante que colorLine seja estritamente uma string válida
+        if type(colorLine) == "string" and #colorLine > 0 then
             monitor.setCursorPos(startX, startY + i - 1)
             monitor.blit(string.rep(" ", #colorLine), colorLine, colorLine)
         end
